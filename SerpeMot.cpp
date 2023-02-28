@@ -4,7 +4,8 @@
 void (*SerpeMot::stall_function)();
 
 void (*SerpeMot::limitSwitch_function)();
-int SerpeMot::step_pin = 2;
+int SerpeMot::step_pin = 25;
+int SerpeMot::dir_pin = 7;
 int SerpeMot::nlimit_pin = 0;
 bool SerpeMot::stepState = false;
 RP2040_PWM* SerpeMot::motor_pwm = nullptr;
@@ -16,16 +17,18 @@ RP2040_PWM* SerpeMot::motor_pwm = nullptr;
 */
 
 //Constructor
-SerpeMot::SerpeMot(int cs, int step, int nstall, void (*stall_fx)(), int nlimit, void (*limitSwitch_fx)())
+SerpeMot::SerpeMot(int cs, int step, int dir, int nstall, void (*stall_fx)(), int nlimit, void (*limitSwitch_fx)())
 {
   cs_pin = cs;
   step_pin = step;
+  dir_pin = dir;
   nstall_pin = nstall;
   nlimit_pin = nlimit;
   stall_function = stall_fx;
   limitSwitch_function = limitSwitch_fx;
   instanceCount++;
 
+  pinMode(dir_pin,OUTPUT);
   SPI.begin();
   driver.setChipSelectPin(cs_pin);
   delay(10); // Give the driver some time to power up.
@@ -39,9 +42,12 @@ SerpeMot::SerpeMot(int cs, int step, int nstall, void (*stall_fx)(), int nlimit,
   //attachInterrupt(digitalPinToInterrupt(nstall_pin), stall_callback, FALLING);
   //attachInterrupt(digitalPinToInterrupt(nlimit_pin), limitSwitch_callback, FALLING);
   SerpeMot::motor_pwm = new RP2040_PWM(step_pin, 0, 0);
-  driver.setDirection(reverseDir);
+  //driver.setDirection(reverseDir);
   driver.enableDriver();
   Serial.begin(2000000);
+  // while(!Serial);
+  // Serial.print("pwm = ");
+  // Serial.println(step_pin);
 
 }
 
@@ -100,20 +106,10 @@ void SerpeMot::setFreq(int freq)
       {
         lastFreq = actualFreq;
         actualFreq += freqStepSize*sign;
-        // if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
-        // {
-        //   driver.setDirection((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
-        // }
-
-        if(actualFreq>0)
+        if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
         {
-          driver.setDirection(0);
+          setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
-        else if(actualFreq<0)
-        {
-          driver.setDirection(1);
-        }
-
         motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/acceleration));
 
@@ -144,7 +140,7 @@ void SerpeMot::setFreq(int freq, int hertzPerSec)
         actualFreq += freqStepSize*sign;
         if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
         {
-          driver.setDirection((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
+          setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
         motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/hertzPerSec));
@@ -178,7 +174,7 @@ void SerpeMot::setAngularSpeed(int deg_s)
         actualFreq += freqStepSize*sign;
         if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
         {
-          driver.setDirection((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
+          setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
         motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/acceleration));
@@ -193,6 +189,7 @@ void SerpeMot::setAngularSpeed(int deg_s)
 //and using coustom acceleration profile
 void SerpeMot::setAngularSpeed(int deg_s, int hertzPerSec)
 {
+  delay(1000);
   int freq = (deg_s*stepMode)/theta_mot;
   if (freq == 0)
   {
@@ -209,22 +206,12 @@ void SerpeMot::setAngularSpeed(int deg_s, int hertzPerSec)
       for(int i = 0; i<abs((int)((delta_freq)/freqStepSize)) ; i ++)
       {
         lastFreq = actualFreq;
-        // Serial.print(driver.getDirection());
-        // Serial.print(" ");
-        // Serial.println(actualFreq);
+
         actualFreq += freqStepSize*sign;
         
-        // if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
-        // {
-        //   driver.setDirection((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
-        // }
-        if(actualFreq>=0)
+        if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
         {
-          driver.setDirection(false);
-        }
-        else if(actualFreq<0)
-        {
-          driver.setDirection(true);
+          setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
         motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/(hertzPerSec)));
@@ -249,6 +236,11 @@ void SerpeMot::setSteps(int steps, int freq)
 int SerpeMot::getFreq(void)
 {
   return SerpeMot::actualFreq;
+}
+
+void SerpeMot::setDir(bool dir)
+{
+  digitalWrite(dir_pin,dir);
 }
 
 

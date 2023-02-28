@@ -7,6 +7,7 @@
 //#include "TimerInterrupt_Generic.h"
 
 #define _TIMERINTERRUPT_LOGLEVEL_     4
+#define _PWM_LOGLEVEL_                3
 
 class SerpeMot
 {
@@ -14,23 +15,25 @@ class SerpeMot
   private:
     int instanceCount = 0;
     static int step_pin;
+    static int dir_pin;
     int cs_pin;
     int nstall_pin;
     static int nlimit_pin;
     int acceleration = 1000;
     int freqStepSize = 10;
     int actualFreq = 0;
-    int currentLimit_ma = 1500;
+    int currentLimit_ma = 2100;
     uint16_t stepMode = 8;
     float theta_mot = 1.8;
     bool reverseDir = false;
     static bool stepState;
     static int nbSteps;
-    static RP2040_PWM* motor_pwm;
+    
     //static MBED_RPI_PICO_TimerInterrupt timer1;
     
     static void (*stall_function)();
     static void (*limitSwitch_function)();
+    static void setDir(bool);
 
     static void stall_callback(void);
     static void limitSwitch_callback(void);
@@ -39,7 +42,8 @@ class SerpeMot
     
   public:
     HighPowerStepperDriver driver;
-    SerpeMot(int cs, int step, int nstall, void (*)(), int nlimit, void (*)());
+    static RP2040_PWM* motor_pwm;
+    SerpeMot(int cs, int step, int dir, int nstall, void (*)(), int nlimit, void (*)());
     ~SerpeMot();
 
     void setRamp(int hertzPerSec);
