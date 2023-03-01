@@ -4,11 +4,11 @@
 void (*SerpeMot::stall_function)();
 
 void (*SerpeMot::limitSwitch_function)();
-int SerpeMot::step_pin = 25;
-int SerpeMot::dir_pin = 7;
-int SerpeMot::nlimit_pin = 0;
-bool SerpeMot::stepState = false;
-RP2040_PWM* SerpeMot::motor_pwm = nullptr;
+//int SerpeMot::step_pin;
+//int SerpeMot::dir_pin;
+int SerpeMot::nlimit_pin;
+//bool SerpeMot::stepState = false;
+//RP2040_PWM* SerpeMot::motor_pwm = nullptr;
 //MBED_RPI_PICO_TimerInterrupt timer1 = MBED_RPI_PICO_TimerInterrupt(1);
 
 
@@ -20,15 +20,15 @@ RP2040_PWM* SerpeMot::motor_pwm = nullptr;
 SerpeMot::SerpeMot(int cs, int step, int dir, int nstall, void (*stall_fx)(), int nlimit, void (*limitSwitch_fx)())
 {
   cs_pin = cs;
-  step_pin = step;
-  dir_pin = dir;
+  this->step_pin = step;
+  this->dir_pin = dir;
   nstall_pin = nstall;
   nlimit_pin = nlimit;
   stall_function = stall_fx;
   limitSwitch_function = limitSwitch_fx;
   instanceCount++;
 
-  pinMode(dir_pin,OUTPUT);
+  pinMode(this->dir_pin,OUTPUT);
   SPI.begin();
   driver.setChipSelectPin(cs_pin);
   delay(10); // Give the driver some time to power up.
@@ -41,13 +41,13 @@ SerpeMot::SerpeMot(int cs, int step, int dir, int nstall, void (*stall_fx)(), in
   pinMode(nlimit_pin, INPUT_PULLUP);
   //attachInterrupt(digitalPinToInterrupt(nstall_pin), stall_callback, FALLING);
   //attachInterrupt(digitalPinToInterrupt(nlimit_pin), limitSwitch_callback, FALLING);
-  SerpeMot::motor_pwm = new RP2040_PWM(step_pin, 0, 0);
+  SerpeMot::motor_pwm = new RP2040_PWM(this->step_pin, 0, 0);
   //driver.setDirection(reverseDir);
   driver.enableDriver();
   Serial.begin(2000000);
   // while(!Serial);
   // Serial.print("pwm = ");
-  // Serial.println(step_pin);
+  // Serial.println(this->step_pin);
 
 }
 
@@ -65,7 +65,7 @@ void SerpeMot::setRamp(int hertzPerSec)
 void SerpeMot::limitSwitch_callback(void)
 {
   //detachInterrupt(digitalPinToInterrupt(nlimit_pin));
-  //motor_pwm->setPWM(step_pin, 500, 0);
+  //motor_pwm->setPWM(this->step_pin, 500, 0);
   (*SerpeMot::limitSwitch_function)();
   //attachInterrupt(nlimit_pin, limitSwitch_callback, FALLING);
 }
@@ -92,7 +92,7 @@ void SerpeMot::setFreq(int freq)
 {
   if (freq == 0)
   {
-    SerpeMot::motor_pwm->setPWM(SerpeMot::step_pin, 500, 0); // Use DC = 0 to stop stepper
+    this->motor_pwm->setPWM(this->step_pin, 500, 0); // Use DC = 0 to stop stepper
   }
   else
   {
@@ -110,7 +110,7 @@ void SerpeMot::setFreq(int freq)
         {
           setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
-        motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
+        this->motor_pwm->setPWM(this->step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/acceleration));
 
       }
@@ -124,7 +124,7 @@ void SerpeMot::setFreq(int freq, int hertzPerSec)
 {
   if (freq == 0)
   {
-    motor_pwm->setPWM(step_pin, 500, 0); // Use DC = 0 to stop stepper
+    this->motor_pwm->setPWM(this->step_pin, 500, 0); // Use DC = 0 to stop stepper
   }
   else
   {
@@ -142,7 +142,7 @@ void SerpeMot::setFreq(int freq, int hertzPerSec)
         {
           setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
-        motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
+        this->motor_pwm->setPWM(this->step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/hertzPerSec));
 
       }
@@ -158,7 +158,7 @@ void SerpeMot::setAngularSpeed(int deg_s)
   int freq = (deg_s*stepMode)/theta_mot;
   if (freq == 0)
   {
-    motor_pwm->setPWM(step_pin, 500, 0); // Use DC = 0 to stop stepper
+    this->motor_pwm->setPWM(this->step_pin, 500, 0); // Use DC = 0 to stop stepper
   }
   else
   {
@@ -176,7 +176,7 @@ void SerpeMot::setAngularSpeed(int deg_s)
         {
           setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
-        motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
+        this->motor_pwm->setPWM(this->step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/acceleration));
 
       }
@@ -193,7 +193,7 @@ void SerpeMot::setAngularSpeed(int deg_s, int hertzPerSec)
   int freq = (deg_s*stepMode)/theta_mot;
   if (freq == 0)
   {
-    motor_pwm->setPWM(step_pin, 500, 0); // Use DC = 0 to stop stepper
+    this->motor_pwm->setPWM(this->step_pin, 500, 0); // Use DC = 0 to stop stepper
   }
   else
   {
@@ -211,9 +211,9 @@ void SerpeMot::setAngularSpeed(int deg_s, int hertzPerSec)
         
         if(((actualFreq > 0) - (actualFreq < 0))!= ((lastFreq > 0) - (lastFreq < 0))) //if the sign of the next frequency to apply changed....
         {
-          setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
+          this->setDir((reverseDir && !(actualFreq > 0)) || ( !reverseDir && (actualFreq > 0))); //either positive speed corresponds to DIR bit == 0 or 1
         }
-        motor_pwm->setPWM(step_pin, abs(actualFreq), 50);
+        this->motor_pwm->setPWM(this->step_pin, abs(actualFreq), 50);
         delayMicroseconds((int)(1.033*(1000000*freqStepSize)/(hertzPerSec)));
 
       }
@@ -240,7 +240,7 @@ int SerpeMot::getFreq(void)
 
 void SerpeMot::setDir(bool dir)
 {
-  digitalWrite(dir_pin,dir);
+  digitalWrite(this->dir_pin,dir);
 }
 
 

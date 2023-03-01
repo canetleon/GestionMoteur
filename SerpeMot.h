@@ -14,26 +14,26 @@ class SerpeMot
 
   private:
     int instanceCount = 0;
-    static int step_pin;
-    static int dir_pin;
+    int step_pin;
+    int dir_pin;
     int cs_pin;
     int nstall_pin;
     static int nlimit_pin;
     int acceleration = 1000;
     int freqStepSize = 10;
     int actualFreq = 0;
-    int currentLimit_ma = 2100;
+    int currentLimit_ma = 1000;
     uint16_t stepMode = 8;
     float theta_mot = 1.8;
     bool reverseDir = false;
-    static bool stepState;
-    static int nbSteps;
+    bool stepState;
+    int nbSteps;
     
     //static MBED_RPI_PICO_TimerInterrupt timer1;
     
     static void (*stall_function)();
     static void (*limitSwitch_function)();
-    static void setDir(bool);
+    void setDir(bool);
 
     static void stall_callback(void);
     static void limitSwitch_callback(void);
@@ -42,9 +42,9 @@ class SerpeMot
     
   public:
     HighPowerStepperDriver driver;
-    static RP2040_PWM* motor_pwm;
+    RP2040_PWM* motor_pwm;
     SerpeMot(int cs, int step, int dir, int nstall, void (*)(), int nlimit, void (*)());
-    ~SerpeMot();
+    //~SerpeMot();
 
     void setRamp(int hertzPerSec);
     void setFreq(int freq);
